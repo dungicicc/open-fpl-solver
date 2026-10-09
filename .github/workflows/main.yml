@@ -23,20 +23,4 @@ jobs:
 
       - name: Run Optimization
         run: |
-          # 1. Thử gọi các lệnh CLI chính thức mà pip install tạo ra trong hệ thống
-          if command -v open-fpl-solver &> /dev/null; then
-            open-fpl-solver solve --settings data/user_settings.json
-          elif command -v fpl-solver &> /dev/null; then
-            fpl-solver solve --settings data/user_settings.json
-          elif command -v solio &> /dev/null; then
-            solio solve --settings data/user_settings.json
-          else
-            # 2. Tự động tìm chính xác file .py chứa hàm main/cli trong toàn bộ repo để thực thi
-            CLI_FILE=$(find . -maxdepth 4 -name "cli.py" -o -name "main.py" -o -name "solve.py" | head -n 1)
-            if [ -n "$CLI_FILE" ]; then
-              PYTHONPATH=. python "$CLI_FILE" solve --settings data/user_settings.json
-            else
-              # 3. Chạy fallback tìm tất cả các file python chạy thử
-              PYTHONPATH=src python -m open_fpl_solver solve --settings data/user_settings.json
-            fi
-          fi
+          PYTHONPATH=. python src/open_fpl_solver/solve.py --config data/user_settings.json || PYTHONPATH=. python solve.py --config data/user_settings.json || python -m open_fpl_solver.solve --config data/user_settings.json
