@@ -23,4 +23,5 @@ jobs:
 
       - name: Run Optimization
         run: |
-          PYTHONPATH=. python src/open_fpl_solver/solve.py --config data/user_settings.json || PYTHONPATH=. python solve.py --config data/user_settings.json || python -m open_fpl_solver.solve --config data/user_settings.json
+          SOLVE_PATH=$(find . -name "solve.py" | head -n 1)
+          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json
