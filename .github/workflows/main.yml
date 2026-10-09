@@ -22,15 +22,16 @@ jobs:
           pip install -e .
           pip install requests pandas
 
-      - name: Patch Solver for Zero Errors
+      - name: Patch Solver for Final Output
         run: |
           python -c "
           path = 'dev/solver.py'
           with open(path, 'r', encoding='utf-8') as f:
               code = f.read()
           
-          # Vá các lỗi KeyError và NoneType an toàn
+          # Vá toàn diện các trường KeyError và NoneType
           code = code.replace('merged_data[\"name\"]', 'merged_data[\"name\"] if \"name\" in merged_data else merged_data[\"Name\"]')
+          code = code.replace('lp[\"name\"]', 'lp[\"name\"] if \"name\" in lp else (lp[\"Name\"] if \"Name\" in lp else \"Unknown\")')
           code = code.replace('options.get(\"use_fh\", [])', '(options.get(\"use_fh\") or [])')
           code = code.replace('options.get(\"use_bb\", [])', '(options.get(\"use_bb\") or [])')
           code = code.replace('options.get(\"use_wc\", [])', '(options.get(\"use_wc\") or [])')
@@ -38,7 +39,7 @@ jobs:
           
           with open(path, 'w', encoding='utf-8') as f:
               f.write(code)
-          print('--> Successfully patched dev/solver.py completely!')
+          print('--> Successfully patched dev/solver.py for output mapping!')
           "
 
       - name: Fetch Official FPL Data & Build Complete Datasets
