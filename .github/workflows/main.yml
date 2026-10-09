@@ -24,18 +24,21 @@ jobs:
 
       - name: Patch Solver for Zero Errors
         run: |
-          # Tự động vá file dev/solver.py để chống mọi lỗi KeyError phát sinh từ cột tên/dữ liệu
           python -c "
           path = 'dev/solver.py'
           with open(path, 'r', encoding='utf-8') as f:
               code = f.read()
           
-          # Vá chỗ lấy cột name an toàn
+          # Vá các lỗi KeyError và NoneType an toàn
           code = code.replace('merged_data[\"name\"]', 'merged_data[\"name\"] if \"name\" in merged_data else merged_data[\"Name\"]')
+          code = code.replace('options.get(\"use_fh\", [])', '(options.get(\"use_fh\") or [])')
+          code = code.replace('options.get(\"use_bb\", [])', '(options.get(\"use_bb\") or [])')
+          code = code.replace('options.get(\"use_wc\", [])', '(options.get(\"use_wc\") or [])')
+          code = code.replace('options.get(\"use_tc\", [])', '(options.get(\"use_tc\") or [])')
           
           with open(path, 'w', encoding='utf-8') as f:
               f.write(code)
-          print('--> Successfully patched dev/solver.py!')
+          print('--> Successfully patched dev/solver.py completely!')
           "
 
       - name: Fetch Official FPL Data & Build Complete Datasets
