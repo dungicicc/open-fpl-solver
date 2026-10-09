@@ -37,7 +37,7 @@ jobs:
           element_types = {1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD'}
           teams = {t['id']: t['short_name'] for t in data['teams']}
 
-          # 2. Xây dựng cấu trúc chuẩn dữ liệu với cả 'ID' (in hoa) và 'id' (in thường)
+          # 2. Xây dựng cấu trúc chuẩn dữ liệu cầu thủ
           df = pd.DataFrame()
           df['ID'] = elements['id']
           df['id'] = elements['id']
@@ -48,18 +48,28 @@ jobs:
           df['Price'] = elements['now_cost'] / 10.0
           df['BV'] = df['Price']
           df['SV'] = df['Price']
-          df['xP'] = elements['ep_next'].astype(float)
+          
+          # Tính xP cơ bản từ form/ep_next
+          xp_val = elements['ep_next'].astype(float)
+          df['xP'] = xp_val
+          df['Pts'] = xp_val
 
-          # Tạo các cột điểm dự báo theo GameWeek (GW)
+          # Tạo đầy đủ các định dạng cột theo Gameweek (1 -> 38)
           for gw in range(1, 39):
               df[f'BV_{gw}'] = df['Price']
               df[f'SV_{gw}'] = df['Price']
-              df[f'xP_{gw}'] = df['xP']
+              df[f'{gw}_BV'] = df['Price']
+              df[f'{gw}_SV'] = df['Price']
+              
+              df[f'xP_{gw}'] = xp_val
+              df[f'Pts_{gw}'] = xp_val
+              df[f'{gw}_xP'] = xp_val
+              df[f'{gw}_Pts'] = xp_val
 
           # 3. Ghi file ra thư mục data
           df.to_csv('data/solio.csv', index=False)
           df.to_csv('data/fplreview.csv', index=False)
-          print('--> Generating datasets with ID and Pos completed successfully!')
+          print('--> Generating datasets with all GW prediction columns completed!')
           "
 
       - name: Run Optimization
