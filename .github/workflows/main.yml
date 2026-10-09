@@ -23,4 +23,4 @@ jobs:
 
       - name: Run Optimization
         run: |
-          fpl-solver solve --settings data/user_settings.json
+          python -m open_fpl_solver solve --settings data/user_settings.json
