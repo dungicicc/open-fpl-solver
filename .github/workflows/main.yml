@@ -37,25 +37,26 @@ jobs:
           element_types = {1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD'}
           teams = {t['id']: t['short_name'] for t in data['teams']}
 
-          # 2. Xây dựng cấu trúc chuẩn dữ liệu cầu thủ
+          # 2. Xây dựng cấu trúc đầy đủ cả viết hoa lẫn viết thường để tránh mọi KeyError
           df = pd.DataFrame()
           df['ID'] = elements['id']
           df['id'] = elements['id']
           df['Name'] = elements['web_name']
           df['name'] = elements['web_name']
           df['Pos'] = elements['element_type'].map(element_types)
+          df['pos'] = elements['element_type'].map(element_types)
           df['Team'] = elements['team'].map(teams)
+          df['team'] = elements['team'].map(teams)
           df['Price'] = elements['now_cost'] / 10.0
+          df['price'] = elements['now_cost'] / 10.0
           df['BV'] = df['Price']
           df['SV'] = df['Price']
           
-          # Điểm dự báo cơ bản & số phút thi đấu mặc định
           xp_val = elements['ep_next'].astype(float)
           df['xP'] = xp_val
           df['Pts'] = xp_val
           df['xMins'] = 90
 
-          # Tạo đầy đủ định dạng cột GW (Pts, xP, xMins, BV, SV)
           for gw in range(1, 39):
               df[f'BV_{gw}'] = df['Price']
               df[f'SV_{gw}'] = df['Price']
@@ -73,7 +74,7 @@ jobs:
           # 3. Ghi file ra thư mục data
           df.to_csv('data/solio.csv', index=False)
           df.to_csv('data/fplreview.csv', index=False)
-          print('--> Done building full datasets with xMins and Pts columns!')
+          print('--> Done generating bulletproof datasets!')
           "
 
       - name: Run Optimization
