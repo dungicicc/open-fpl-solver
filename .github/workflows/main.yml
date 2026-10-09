@@ -23,4 +23,4 @@ jobs:
 
       - name: Run Optimization
         run: |
-          python -m fpl_optimization_tools solve --settings data/user_settings.json
+          python run/regular.py
