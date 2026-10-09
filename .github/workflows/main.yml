@@ -20,18 +20,47 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
+          pip install requests pandas
 
-      - name: Fetch and Prepare Data
+      - name: Fetch Official FPL Data & Build Projection Files
         run: |
           mkdir -p data
-          # Chạy script tải dữ liệu mặc định của repo nếu có
-          python -m open_fpl_solver.get_data || python dev/get_data.py || true
-          
-          # Tải dữ liệu FPL Review chuẩn về lưu thành cả 2 tên file để chống mọi lỗi thiếu file
-          curl -s -L "https://raw.githubusercontent.com/fploptimiser/fplreview-data/main/fplreview.csv" -o data/fplreview.csv || true
-          cp data/fplreview.csv data/solio.csv || true
+          python -c "
+          import urllib.request, json, pandas as pd
+
+          # 1. Tải dữ liệu từ FPL Official API
+          url = 'https://fantasy.premierleague.com/api/bootstrap-static/'
+          req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+          data = json.loads(urllib.request.urlopen(req).read().decode('utf-8'))
+
+          elements = pd.DataFrame(data['elements'])
+          element_types = {1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD'}
+          teams = {t['id']: t['short_name'] for t in data['teams']}
+
+          # 2. Xây dựng cấu trúc chuẩn dữ liệu cầu thủ cho Solver
+          df = pd.DataFrame()
+          df['id'] = elements['id']
+          df['Name'] = elements['web_name']
+          df['Pos'] = elements['element_type'].map(element_types)
+          df['Team'] = elements['team'].map(teams)
+          df['Price'] = elements['now_cost'] / 10.0
+          df['BV'] = df['Price']
+          df['SV'] = df['Price']
+          df['xP'] = elements['ep_next'].astype(float)
+
+          # Tạo các cột điểm dự báo theo GameWeek (GW)
+          for gw in range(1, 39):
+              df[f'BV_{gw}'] = df['Price']
+              df[f'SV_{gw}'] = df['Price']
+              df[f'xP_{gw}'] = df['xP']
+
+          # 3. Ghi file ra thư mục data với đủ các tên file dự phòng
+          df.to_csv('data/solio.csv', index=False)
+          df.to_csv('data/fplreview.csv', index=False)
+          print('--> Done generating valid FPL datasets with Pos column!')
+          "
 
       - name: Run Optimization
         run: |
           SOLVE_PATH=$(find . -name "solve.py" | head -n 1)
-          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json --datasource fplreview || PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json
+          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json
