@@ -22,7 +22,7 @@ jobs:
           pip install -e .
           pip install requests pandas
 
-      - name: Fetch Official FPL Data & Build Projection Files
+      - name: Fetch Official FPL Data & Build Complete Datasets
         run: |
           mkdir -p data
           python -c "
@@ -49,12 +49,13 @@ jobs:
           df['BV'] = df['Price']
           df['SV'] = df['Price']
           
-          # Tính xP cơ bản từ form/ep_next
+          # Điểm dự báo cơ bản & số phút thi đấu mặc định
           xp_val = elements['ep_next'].astype(float)
           df['xP'] = xp_val
           df['Pts'] = xp_val
+          df['xMins'] = 90
 
-          # Tạo đầy đủ các định dạng cột theo Gameweek (1 -> 38)
+          # Tạo đầy đủ định dạng cột GW (Pts, xP, xMins, BV, SV)
           for gw in range(1, 39):
               df[f'BV_{gw}'] = df['Price']
               df[f'SV_{gw}'] = df['Price']
@@ -66,10 +67,13 @@ jobs:
               df[f'{gw}_xP'] = xp_val
               df[f'{gw}_Pts'] = xp_val
 
+              df[f'xMins_{gw}'] = 90
+              df[f'{gw}_xMins'] = 90
+
           # 3. Ghi file ra thư mục data
           df.to_csv('data/solio.csv', index=False)
           df.to_csv('data/fplreview.csv', index=False)
-          print('--> Generating datasets with all GW prediction columns completed!')
+          print('--> Done building full datasets with xMins and Pts columns!')
           "
 
       - name: Run Optimization
