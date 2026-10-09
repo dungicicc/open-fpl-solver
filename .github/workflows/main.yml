@@ -21,13 +21,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Fetch Latest FPL Data
+      - name: Fetch and Prepare Data
         run: |
           mkdir -p data
-          # Tải dữ liệu dữ báo điểm / API về data/
-          PYTHONPATH=. python -m src.open_fpl_solver.get_data || PYTHONPATH=. python dev/get_data.py || PYTHONPATH=. python -c "import urllib.request; urllib.request.urlretrieve('https://raw.githubusercontent.com/fploptimiser/fplreview-data/main/fplreview.csv', 'data/fplreview.csv')" || true
+          # Chạy script tải dữ liệu mặc định của repo nếu có
+          python -m open_fpl_solver.get_data || python dev/get_data.py || true
+          
+          # Tải dữ liệu FPL Review chuẩn về lưu thành cả 2 tên file để chống mọi lỗi thiếu file
+          curl -s -L "https://raw.githubusercontent.com/fploptimiser/fplreview-data/main/fplreview.csv" -o data/fplreview.csv || true
+          cp data/fplreview.csv data/solio.csv || true
 
       - name: Run Optimization
         run: |
           SOLVE_PATH=$(find . -name "solve.py" | head -n 1)
-          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json
+          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json --datasource fplreview || PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json
