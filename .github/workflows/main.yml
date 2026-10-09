@@ -19,8 +19,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install .
+          pip install -e .
 
       - name: Run Optimization
         run: |
-          python -m open_fpl_solver solve --settings data/user_settings.json
+          python -m fpl_optimization_tools solve --settings data/user_settings.json
