@@ -1,7 +1,9 @@
-name: Run FPL Optimization
+name: Run FPL Optimization & Notify Telegram
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * 5'
 
 jobs:
   solve:
@@ -28,18 +30,14 @@ jobs:
           path = 'dev/solver.py'
           with open(path, 'r', encoding='utf-8') as f:
               code = f.read()
-          
-          # Vá toàn diện các trường KeyError và NoneType
           code = code.replace('merged_data[\"name\"]', 'merged_data[\"name\"] if \"name\" in merged_data else merged_data[\"Name\"]')
           code = code.replace('lp[\"name\"]', 'lp[\"name\"] if \"name\" in lp else (lp[\"Name\"] if \"Name\" in lp else \"Unknown\")')
           code = code.replace('options.get(\"use_fh\", [])', '(options.get(\"use_fh\") or [])')
           code = code.replace('options.get(\"use_bb\", [])', '(options.get(\"use_bb\") or [])')
           code = code.replace('options.get(\"use_wc\", [])', '(options.get(\"use_wc\") or [])')
           code = code.replace('options.get(\"use_tc\", [])', '(options.get(\"use_tc\") or [])')
-          
           with open(path, 'w', encoding='utf-8') as f:
               f.write(code)
-          print('--> Successfully patched dev/solver.py for output mapping!')
           "
 
       - name: Fetch Official FPL Data & Build Complete Datasets
@@ -47,15 +45,12 @@ jobs:
           mkdir -p data
           python -c "
           import urllib.request, json, pandas as pd
-
           url = 'https://fantasy.premierleague.com/api/bootstrap-static/'
           req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
           data = json.loads(urllib.request.urlopen(req).read().decode('utf-8'))
-
           elements = pd.DataFrame(data['elements'])
           element_types = {1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD'}
           teams = {t['id']: t['short_name'] for t in data['teams']}
-
           df = pd.DataFrame()
           df['ID'] = elements['id']
           df['id'] = elements['id']
@@ -69,32 +64,56 @@ jobs:
           df['price'] = elements['now_cost'] / 10.0
           df['BV'] = df['Price']
           df['SV'] = df['Price']
-          
           xp_val = elements['ep_next'].astype(float)
           df['xP'] = xp_val
           df['Pts'] = xp_val
           df['xMins'] = 90
-
           for gw in range(1, 39):
               df[f'BV_{gw}'] = df['Price']
               df[f'SV_{gw}'] = df['Price']
               df[f'{gw}_BV'] = df['Price']
               df[f'{gw}_SV'] = df['Price']
-              
               df[f'xP_{gw}'] = xp_val
               df[f'Pts_{gw}'] = xp_val
               df[f'{gw}_xP'] = xp_val
               df[f'{gw}_Pts'] = xp_val
-
               df[f'xMins_{gw}'] = 90
               df[f'{gw}_xMins'] = 90
-
           df.to_csv('data/solio.csv', index=False)
           df.to_csv('data/fplreview.csv', index=False)
-          print('--> Done generating data files!')
           "
 
       - name: Run Optimization
         run: |
           SOLVE_PATH=$(find . -name "solve.py" | head -n 1)
-          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json
+          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json > output.log 2>&1 || true
+          cat output.log
+
+      - name: Send Result to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python -c "
+          import os, requests
+
+          with open('output.log', 'r', encoding='utf-8', errors='ignore') as f:
+              content = f.read()
+
+          # Lọc phần Transfer Overview hoặc tóm tắt kết quả
+          lines = content.split('\n')
+          selected = [line for line in lines if any(k in line for k in ['Transfer', 'GW', 'Optimal', 'Score', 'xPts', '->', 'Added'])]
+          
+          # Cắt ngắn nếu quá dài cho một tin nhắn Telegram
+          msg_body = '\n'.join(selected[:35]) if selected else content[-1500:]
+          message = '⚽ **FPL OPTIMIZATION REPORT** ⚽\n\n' + msg_body
+
+          token = os.environ.get('TELEGRAM_BOT_TOKEN')
+          chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+          url = f'https://api.telegram.org/bot{token}/sendMessage'
+          
+          # Telegram giới hạn 4096 ký tự mỗi tin nhắn
+          payload = {'chat_id': chat_id, 'text': message[:4000]}
+          res = requests.post(url, json=payload)
+          print('Telegram response status:', res.status_code)
+          "
