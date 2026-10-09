@@ -21,7 +21,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
+      - name: Prepare Data Folder
+        run: |
+          mkdir -p data
+          # Nếu chưa có solio.csv, tải dữ liệu từ fplreview hoặc tạo file data trống
+          if [ ! -f "data/solio.csv" ]; then
+            python -c "import pandas as pd; pd.DataFrame().to_csv('data/solio.csv')" || true
+          fi
+
       - name: Run Optimization
         run: |
           SOLVE_PATH=$(find . -name "solve.py" | head -n 1)
-          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json
+          PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json --datasource fplreview || PYTHONPATH=. python "$SOLVE_PATH" --config data/user_settings.json
