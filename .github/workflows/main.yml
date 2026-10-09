@@ -14,13 +14,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install .
+          pip install -e .
 
       - name: Run Optimization
         run: |
-          solio solve --settings data/user_settings.json || open-fpl-solver solve --settings data/user_settings.json || python -m src.cli solve --settings data/user_settings.json
+          python -m open_fpl_solver solve --settings data/user_settings.json || python run_regular.py || python run_optimization.py || python src/open_fpl_solver/cli.py solve --settings data/user_settings.json
