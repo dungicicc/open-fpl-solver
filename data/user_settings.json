@@ -2,9 +2,10 @@
     "datasource": "solio",
     "team_data": "id",
     "team_id": 2049285,
+    "next_gw": 7,
     "horizon": 5,
     "ft_custom": 1,
-    "bank_custom": 1.8,
+    "bank_custom": 1.1,
     "no_transfer_last_gws": 2,
     "decay_base": 0.9,
     "ft_value_list": {
@@ -18,9 +19,9 @@
     "keep_top_ev_percent": 5,
     "banned": [],
     "locked": [],
-    "use_wc": null,
-    "use_bb": null,
-    "use_fh": null,
-    "use_tc": null,
+    "use_wc": [],
+    "use_bb": [],
+    "use_fh": [],
+    "use_tc": [],
     "verbose": true
 }
