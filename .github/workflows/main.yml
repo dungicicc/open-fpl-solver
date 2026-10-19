@@ -24,6 +24,46 @@ jobs:
           pip install -e .
           pip install requests pandas
 
+      - name: Auto Update next_gw in user_settings.json
+        run: |
+          python -c "
+          import urllib.request, json
+
+          # 1. Gọi FPL API lấy GameWeek hiện tại / tiếp theo
+          url = 'https://fantasy.premierleague.com/api/bootstrap-static/'
+          req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+          data = json.loads(urllib.request.urlopen(req).read().decode('utf-8'))
+          
+          next_gw = 1
+          for event in data['events']:
+              if event['is_next']:
+                  next_gw = event['id']
+                  break
+              elif event['is_current'] and not event['finished']:
+                  next_gw = event['id']
+          
+          print(f'--> Auto detected next_gw: {next_gw}')
+
+          # 2. Đọc và cập nhật user_settings.json
+          settings_path = 'data/user_settings.json'
+          try:
+              with open(settings_path, 'r', encoding='utf-8') as f:
+                  settings = json.load(f)
+          except Exception:
+              settings = {}
+
+          settings['next_gw'] = next_gw
+          # Đảm bảo các thuộc tính chip dạng list không bị null
+          for chip in ['use_wc', 'use_bb', 'use_fh', 'use_tc']:
+              if not settings.get(chip):
+                  settings[chip] = []
+
+          with open(settings_path, 'w', encoding='utf-8') as f:
+              json.dump(settings, f, indent=4)
+          
+          print('--> Updated data/user_settings.json successfully!')
+          "
+
       - name: Patch Solver for Final Output
         run: |
           python -c "
@@ -100,11 +140,9 @@ jobs:
           with open('output.log', 'r', encoding='utf-8', errors='ignore') as f:
               content = f.read()
 
-          # Lọc phần Transfer Overview hoặc tóm tắt kết quả
           lines = content.split('\n')
           selected = [line for line in lines if any(k in line for k in ['Transfer', 'GW', 'Optimal', 'Score', 'xPts', '->', 'Added'])]
           
-          # Cắt ngắn nếu quá dài cho một tin nhắn Telegram
           msg_body = '\n'.join(selected[:35]) if selected else content[-1500:]
           message = '⚽ **FPL OPTIMIZATION REPORT** ⚽\n\n' + msg_body
 
@@ -112,7 +150,6 @@ jobs:
           chat_id = os.environ.get('TELEGRAM_CHAT_ID')
           url = f'https://api.telegram.org/bot{token}/sendMessage'
           
-          # Telegram giới hạn 4096 ký tự mỗi tin nhắn
           payload = {'chat_id': chat_id, 'text': message[:4000]}
           res = requests.post(url, json=payload)
           print('Telegram response status:', res.status_code)
